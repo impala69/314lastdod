@@ -5,28 +5,28 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import ru.kata.spring.boot_security.demo.dao.UserDAO;
 import ru.kata.spring.boot_security.demo.models.User;
-import ru.kata.spring.boot_security.demo.repository.UserRepository;
 
 
 @Service
+@Transactional
 public class UserDetailsServiceImpl implements UserDetailsService {
+    private UserDAO userDAO;
+
     @Autowired
-    private UserRepository userRepository;
+    public void setUserDAO(UserDAO userDAO) {
+        this.userDAO = userDAO;
+    }
 
     @Override
-    public UserDetails loadUserByUsername(String email)
-            throws UsernameNotFoundException {
-        User user = userRepository.getUserByEmail(email);
+    public UserDetails loadUserByUsername(String username) {
 
+        User user = userDAO.readByFirstName(username);
         if (user == null) {
             throw new UsernameNotFoundException("Could not find user");
         }
-
-        return new MyUserDetails(user);
+        return user;
     }
-
-    // «Пользователь» – это просто Object. В большинстве случаев он может быть
-    //  приведен к классу UserDetails.
-    // Для создания UserDetails используется интерфейс UserDetailsService, с единственным методом:
 }

@@ -1,213 +1,140 @@
-const userFetch = {
-    head: {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json; charset=UTF-8',
-        'Referer': null
-    },
-    getAllUsers: async () => await fetch('api/users'),
-    getUserByUsername: async () => await fetch(`api/name`),
-    getUserById: async (id) => await fetch(`api/users/` + id),
-    addUser: async (user) => await fetch('api/users',
-        {method: "POST", headers: userFetch.head, body: JSON.stringify(user)}),
-    updateUser: async (user) => await fetch(`api/users/`,
-        {method: 'PUT', headers: userFetch.head, body: JSON.stringify(user)}),
-    deleteUserByID: async (id) => await fetch(`api/users/` + id,
-        {method: 'DELETE', headers: userFetch.head})
+const linkGetAllUsers = "http://localhost:8080/api/users";
+const linkGetUser = "http://localhost:8080/api/user/";
+const linkDeleteUser = "http://localhost:8080/api/delete/";
+const linkUpdateUser = "http://localhost:8080/api/update/user";
+const linkNewUser = "http://localhost:8080/api/new/user";
 
+let userFormNew = {
+    firstName: "testing",
+    lastName: "1",
+    age: 1,
+    email: "1",
+    password: "1",
+    roles: [
+        {
+            role: "ROLE_ADMIN"
+        }
+    ]
 }
 
-
-infoUser()
-getUsers()
-
-
-
-function getRoles(list) {
-    let userRoles = [];
-    for (let role of list) {
-        if (role.name == "ADMIN") {
-            userRoles.push(" ADMIN");
+let userForm = {
+    id: 2,
+    firstName: "testing",
+    lastName: "1",
+    age: 1,
+    email: "1",
+    password: "1",
+    roles: [
+        {
+            role: "ROLE_ADMIN"
         }
-        if (role.name == "USER") {
-            userRoles.push(" USER");
-        }
+    ]
+}
 
+allUsers();
+
+async function allUsers() {
+    console.log("Executing request!");
+
+    try {
+        const response = await fetch(linkGetAllUsers);
+        const users = await response.json();
+
+        if (users.length > 0) {
+            let temp = "";
+            users.forEach((u) => {
+                temp += "<tr><td>" + u.id + "</td>";
+                temp += "<td>" + u.firstName + "</td>";
+                temp += "<td>" + u.lastName + "</td>";
+                temp += "<td>" + u.age + "</td>";
+                temp += "<td>" + u.email + "</td>";
+                temp += "<td>" + printRoles(u.roles) + "</td>";
+                temp += "<td>" + `<button onclick='updateUserForm(${u.id})' type='button' class='btn btn-info'>Edit</button>` + "</td>";
+                temp += `<td><button onclick="deletedUser(${u.id})" class=\"btn btn-danger delBtn\">Delete</button></td></tr>`;
+            });
+            document.getElementById("allUsers").innerHTML = temp;
+        }
+    } catch (e) {
+        console.error(e);
     }
-    let stringRoles = userRoles.join("  ");
-    return stringRoles;
 }
 
-function addRoles(role) {
-    let roles = [];
-    if (role === "ADMIN") {
-        roles.push({id: 1, name: "ADMIN", authority: "ADMIN"});
-    } else {
-        roles.push({id: 2, name: "USER", authority: "USER"});
+async function updateUserForm(id) {
+    $(".editUser #exampleModal").modal();
+
+    let user = await (await fetch(linkGetUser + id)).json();
+
+    $('#id').val(user.id);
+    $('#edit-firstname').val(user.firstName);
+    $('#edit-lastname').val(user.lastName);
+    $('#edit-age').val(user.age);
+    $('#edit-email').val(user.email);
+    $('#edit-password').val(user.password);
+    $('#edit-roles').val(user.roles);
+
+    upbtn.onclick = function () {
+        userForm.id = id;
+        userForm.firstName = $('#edit-firstname').val();
+        userForm.lastName = $('#edit-lastname').val();
+        userForm.age = $('#edit-age').val();
+        userForm.email = $('#edit-email').val();
+        userForm.password = $('#edit-password').val();
+        userForm.roles = $('#edit-roles').val();
+        updateUser();
     }
-    return roles;
 }
 
-
-function getUsers() {
-    userFetch.getAllUsers().then(
-        res => {
-            res.json().then(
-                users => {
-                    users.forEach((user) => {
-                        console.log(user)
-                        let stringRoles = getRoles(user.roles);
-                        document.querySelector('#tableUsers').insertAdjacentHTML('beforeend',
-                            `<tr>
-                <td>${user.id}</td>
-                <td>${user.firstName}</td>
-                <td>${user.lastName}</td>
-                <td>${user.age}</td>
-                <td>${user.email}</td>
-                <td>${stringRoles}</td>
-                <td>
-                <button type="submit" onclick="editUser(${user.id})"
-                class="btn btn-info" data-toggle="modal" data-target="#editUser">Edit</button>
-                </td>
-                <td>
-                <button type="submit" onclick="deleteUser(${user.id})"
-                class="btn btn-danger" data-toggle="modal" data-target="#deleteUser">Delete</button>
-                </td>
-                </tr>`);
-                    })
-                }
-            )
-        }
-    )
-}
-
-function addUserData() {
-    document.addEventListener('DOMContentLoaded', addUserData);
-    let firstName = document.getElementById('addFirstName').value;
-    let lastName = document.getElementById('addLastName').value;
-    let age = document.getElementById('addAge').value;
-    let email = document.getElementById('addEmail').value;
-    let password = document.getElementById('addPassword').value;
-    let role = document.getElementById('addRoles').value;
-    let user = {
-        firstName: firstName,
-        lastName: lastName,
-        age: age,
-        email: email,
-        password: password,
-        roles: addRoles(role)
-    };
-    console.log(user)
-    userFetch.addUser(user).then(() => {
-        document.getElementById('addFirstName').value = ``;
-        document.getElementById('addLastName').value = ``;
-        document.getElementById('addAge').value = ``;
-        document.getElementById('addEmail').value = ``;
-        document.getElementById('addPassword').value = ``;
-        document.getElementById('addRoles').value = ``;
-        document.getElementById('tableUsers').innerHTML = ``;
-        getUsers();
-    })
-}
-
-
-function editUser(id) {
-    userFetch.getUserById(id)
-        .then(res => {
-            res.json().then(user => {
-                $('#editId').val(user.id)
-                $('#editFirstName').val(user.firstName)
-                $('#editLastName').val(user.lastName)
-                $('#editAge').val(user.age)
-                $('#editEmail').val(user.email)
-                $('#editPassword').val("")
-                $('#editRoles').val(getRoles(user.roles))
-            })
-        })
-}
-
-
-function updateUser() {
-    let id = document.getElementById('editId').value;
-    let firstName = document.getElementById('editFirstName').value;
-    let lastName = document.getElementById('editLastName').value;
-    let age = document.getElementById('editAge').value;
-    let email = document.getElementById('editEmail').value;
-    let password = document.getElementById('editPassword').value;
-    let role = document.getElementById('editRoles').value;
-    let user = {
-        id: id,
-        firstName: firstName,
-        lastName: lastName,
-        age: age,
-        email: email,
-        password: password,
-        roles: addRoles(role)
-    };
-    console.log(user)
-    console.log(JSON.stringify(user))
-    userFetch.updateUser(user).then(() => {
-        document.getElementById('editId').value = ``;
-        document.getElementById('editFirstName').value = ``;
-        document.getElementById('editLastName').value = ``;
-        document.getElementById('editAge').value = ``;
-        document.getElementById('editEmail').value = ``;
-        document.getElementById('editPassword').value = ``;
-        document.getElementById('editRoles').value = ``;
-        document.getElementById('tableUsers').innerHTML = ``;
-        getUsers();
-        $('#editUser').modal('hide');
-
-    })
-}
-
-
-function deleteUser(id) {
-    userFetch.getUserById(id)
-        .then(res => {
-            res.json().then(user => {
-                $('#deleteId').val(user.id)
-                $('#deleteFirstName').val(user.firstName)
-                $('#deleteLastName').val(user.lastName)
-                $('#deleteAge').val(user.age)
-                $('#deleteEmail').val(user.email)
-                $('#deleteRoles').val(getRoles(user.roles))
-            })
-        })
-}
-
-function deleteUserById() {
-    let id = document.getElementById('deleteId').value;
-    userFetch.deleteUserByID(id).then(() => {
-        document.getElementById('deleteId').value = ``;
-        document.getElementById('deleteFirstName').value = ``;
-        document.getElementById('deleteLastName').value = ``;
-        document.getElementById('deleteAge').value = ``;
-        document.getElementById('deleteEmail').value = ``;
-        document.getElementById('deleteRoles').value = ``;
-        document.getElementById('tableUsers').innerHTML = ``;
-        getUsers();
-        $('#deleteUser').modal('hide');
-    });
-}
-
-
-function infoUser() {
-    userFetch.getUserByUsername()
-        .then(res => res.json())
-        .then(user => {
-            let stringRoles = getRoles(user.roles);
-            document.querySelector('#infoUser').innerHTML = `
-                ${user.email} with roles: ${stringRoles}
-            `;
-            document.querySelector('#userInfoPanel').innerHTML = `
-            <tr>
-                <td>${user.id}</td>
-                <td>${user.firstName}</td>
-                <td>${user.lastName}</td>
-                <td>${user.age}</td>
-                <td>${user.email}</td>
-                <td>${stringRoles}</td>
-                </tr>
-            `;
+async function updateUser() {
+    try {
+        await fetch(linkUpdateUser, {
+            method: "PATCH",
+            body: JSON.stringify(userForm),
+            headers: {
+                "Content-Type": "application/json"
+            }
         });
+    } catch (e) {
+        console.error(e);
+    }
+}
+
+async function newUser() {
+    try {
+        await fetch(linkNewUser, {
+            method: "POST",
+            body: JSON.stringify(userFormNew),
+            headers: {
+                "Content-Type": "application/json"
+            }
+        });
+    } catch (e) {
+        console.error(e);
+    }
+}
+
+function deletedUser(id) {
+    fetch(linkDeleteUser + id, {
+        method: "DELETE",
+    }).then(() => allUsers());
+}
+
+function printRoles(roles) {
+    let print = "";
+    for (let i = 0; i < roles.length; i++) {
+        print += roles[i].role;
+        if (roles.length > 1 && i !== 1) {
+            print += ", ";
+        }
+    }
+    return print;
+}
+
+newbtn.onclick = function () {
+    userFormNew.firstName = $('#new-firstname').val();
+    userFormNew.lastName = $('#new-lastname').val();
+    userFormNew.age = $('#new-age').val();
+    userFormNew.email = $('#new-email').val();
+    userFormNew.password = $('#new-password').val();
+    userFormNew.roles = $('#new-roles').val();
+    newUser().then(allUsers);
 }

@@ -1,70 +1,75 @@
 package ru.kata.spring.boot_security.demo.controller;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
+import ru.kata.spring.boot_security.demo.models.Role;
 import ru.kata.spring.boot_security.demo.models.User;
 import ru.kata.spring.boot_security.demo.service.RoleService;
 import ru.kata.spring.boot_security.demo.service.UserService;
 
-
-import java.security.Principal;
+import java.util.ArrayList;
 import java.util.List;
 
-@RestController
-@RequestMapping("api")
-public class AdminRestController {
+
+@Controller
+@RequestMapping("/admin")
+public class AdminController {
+
+    private final UserService userService;
+    private final RoleService roleService;
 
     @Autowired
-    private UserService userService;
-
-    @Autowired
-    private RoleService roleServise;
-
-
-    @GetMapping("/users")
-    public ResponseEntity<List<User>> getUsers () {
-        return ResponseEntity.ok(userService.findAll());
+    public AdminController(UserService userService, RoleService roleService) {
+        this.userService = userService;
+        this.roleService = roleService;
     }
 
-    @GetMapping( "/users/{id}")
-    public ResponseEntity<User> getUser (@PathVariable Long id){
+    @GetMapping()
+    public String printUser(Model model) {
+        model.addAttribute("users", userService.read());
 
+        User currentUser = (User) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        model.addAttribute("currentUser", currentUser);
+        model.addAttribute("roles", roleService.getAllRoles());
 
-        final User user = userService.findById(id);
-        return user != null
-                ? new ResponseEntity<>(user, HttpStatus.OK)
-                : new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        return "admin";
     }
 
-
-
-    @PostMapping ("/users")
-    public ResponseEntity<?> addUser (@RequestBody User user) {
-        userService.save(user);
- //       public ResponseEntity<?> newUser (@RequestBody User user){
-        return ResponseEntity.ok().body(user);
-//    }
+    @PostMapping()
+    public String create(@ModelAttribute(value = "user") User user,
+                         @RequestParam(name = "roles", required = false) String... roles) {
+        List<Role> listRoles = readRoles(roles);
+        user.setRoles(listRoles);
+        userService.create(user);
+        return "redirect:/admin";
     }
 
-    @PutMapping("/users")
-//    public void updateUser(@RequestBody User user) {
-//        userService.save(user);
-        public ResponseEntity<?> updateUser(@RequestBody User user) {
-        userService.save(user);
-        return new ResponseEntity<>(user, HttpStatus.OK);
+    @PatchMapping("/{id}")
+    public String update(@ModelAttribute("user") User user
+            , @RequestParam(name = "roles", required = false) String... roles) {
+        List<Role> listRoles = readRoles(roles);
+        user.setRoles(listRoles);
+        userService.update(user);
+        return "redirect:/admin";
     }
 
-    @DeleteMapping( "/users/{id}")
-    public void deleteUser (@PathVariable Long id){
-        User user = userService.findById(id);
-        userService.delete(user);
+    @DeleteMapping(value = "/{id}")
+    public String deleteUser(@PathVariable long id) {
+        userService.delete(id);
+        return "redirect:/admin";
     }
 
-    @GetMapping("/name")
-    public ResponseEntity<User> getAdminByName(Principal principal) {
-        return ResponseEntity.ok(userService.getUserByEmail(principal.getName()));
+    private List<Role> readRoles(String... role) {
+        List<Role> roles = new ArrayList<>();
+        if (role != null) {
+            for (String s : role) {
+                roles.add(roleService.readByRole(s));
+            }
+        }
+        return roles;
     }
 
 
